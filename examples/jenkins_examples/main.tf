@@ -28,7 +28,8 @@ resource "tls_private_key" "ssh" {
 }
 
 module "host" {
-  source            = "../../"
+  source            = "git::https://github.com/debu99/jenkins-module?ref=0.1"
+  #source            = "../../"
   create_instance   = 1
   environment_name  = "DigiFarming"
   host_name         = "Jenkins"
