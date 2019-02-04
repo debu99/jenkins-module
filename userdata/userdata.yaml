@@ -1,0 +1,44 @@
+#cloud-config
+coreos:
+  units:
+    - name: format-jenkins-vol.service
+      command: start
+      content: |
+        [Unit]
+        Description=Format Jenkins Volume
+        Before=docker.service mnt-jenkins.mount
+        ConditionPathExists=!/mnt/jenkins
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/sbin/mkfs.ext4 /dev/xvdf  
+
+    - name: mnt-jenkins.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount Jenkins to /mnt/jenkins
+        Before=docker.service
+        After=format-jenkins-vol.service
+        Requires=format-jenkins-vol.service
+
+        [Mount]
+        What=/dev/xvdf
+        Where=/mnt/jenkins
+        Type=ext4       
+
+    - name: jenkins.service
+      command: start
+      content: |
+        [Unit]
+        Description=Jenkins Service
+        After=docker.service network-online.target
+        Requires=docker.service network-online.target
+        ConditionPathExists=/mnt/jenkins
+
+        [Service]
+        ExecStartPre=-/usr/bin/docker stop jenkins
+        ExecStartPre=-/usr/bin/docker rm -f jenkins
+        ExecStartPre=/usr/bin/chown 1000 /mnt/jenkins
+        ExecStart=/usr/bin/docker run --rm --privileged --net=host -p 8080:8080 -p 50000:50000 --name jenkins -v /mnt/jenkins:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock -v /root:/root jenkins
+
